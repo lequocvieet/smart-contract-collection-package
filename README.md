@@ -35,16 +35,16 @@ npx hardhat compile
 
 ```
 
-## Run test
+#### Run test
 
 ```shell
 npx hardhat test test/your_directory
 
 ```
 
-## Hardhat console
+#### Hardhat console
 
 ```shell
-npx hardhat console --network localhostw
+npx hardhat console --network localhost
 
 ```
