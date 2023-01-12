@@ -1,34 +1,34 @@
-# Hardhat
+## Hardhat
 
-## Install hardhat
+#### Install hardhat
 
 ```shell
 npm install --save-dev hardhat
 
 ```
 
-## Help
+#### Help
 
 ```shell
 npx hardhat help
 
 ```
 
-## Deploy
+#### Deploy
 
 ```shell
 npx hardhat run scripts/your_directory  --network localhost
 
 ```
 
-## Run local node
+#### Run local node
 
 ```shell
 npx hardhat node
 
 ```
 
-## Compile
+#### Compile
 
 ```shell
 npx hardhat compile
@@ -45,6 +45,6 @@ npx hardhat test test/your_directory
 ## Hardhat console
 
 ```shell
-npx hardhat console --network localhost
+npx hardhat console --network localhostw
 
 ```
