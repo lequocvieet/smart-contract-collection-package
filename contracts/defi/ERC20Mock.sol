@@ -18,4 +18,5 @@ contract ERC20Mock is ERC20 {
     function getBalance(address account) public view returns(uint256){
          return balanceOf(account);
     }
+
 }

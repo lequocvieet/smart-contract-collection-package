@@ -17,38 +17,7 @@
 
 pragma solidity >=0.5.10;
 
-import "./value.sol";
-
-contract LibNote {
-    event LogNote(
-        bytes4 indexed sig,
-        address indexed usr,
-        bytes32 indexed arg1,
-        bytes32 indexed arg2,
-        bytes data
-    ) anonymous;
-
-    modifier note() {
-        _;
-        assembly {
-            // log an 'anonymous' event with a constant 6 words of calldata
-            // and four indexed topics: selector, caller, arg1 and arg2
-            let mark := msize() // end of memory ensures zero
-            mstore(0x40, add(mark, 288)) // update free memory pointer
-            mstore(mark, 0x20) // bytes type data offset
-            mstore(add(mark, 0x20), 224) // bytes size (padded)
-            calldatacopy(add(mark, 0x40), 0, 224) // bytes payload
-            log4(
-                mark,
-                288, // calldata
-                shl(224, shr(224, calldataload(0))), // msg.sig
-                caller(), // msg.sender
-                calldataload(4), // arg1
-                calldataload(36) // arg2
-            )
-        }
-    }
-}
+import "./median.sol";
 
 contract OSM is LibNote {
     // --- Auth ---
@@ -140,21 +109,26 @@ contract OSM is LibNote {
     }
 
     function pass() public view returns (bool ok) {
+        console.log("block timestamp", block.timestamp);
+        console.log("zzz+hop", add(zzz, hop));
         return era() >= add(zzz, hop);
     }
 
     function poke() external note stoppable {
         require(pass(), "OSM/not-passed");
-        (bytes32 wut, bool ok) = DSValue(src).peek();
+        (uint256 wut, bool ok) = Median(src).peek();
+        console.log("ok", ok);
         if (ok) {
             cur = nxt;
-            nxt = Feed(uint128(uint(wut)), 1);
+            nxt = Feed(uint128(wut), 1);
             zzz = prev(era());
+            console.log("cur.val", cur.val);
             emit LogValue(bytes32(uint(cur.val)));
         }
     }
 
     function peek() external view toll returns (bytes32, bool) {
+        console.log("cur.has", cur.has);
         return (bytes32(uint(cur.val)), cur.has == 1);
     }
 
@@ -176,7 +150,7 @@ contract OSM is LibNote {
         bud[a] = 0;
     }
 
-    function kiss(address[] calldata a) external note auth {
+    function kisses(address[] calldata a) external note auth {
         for (uint i = 0; i < a.length; i++) {
             require(a[i] != address(0), "OSM/no-contract-0");
             bud[a[i]] = 1;

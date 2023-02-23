@@ -143,6 +143,7 @@ contract Median is LibNote {
             // Check that signer is an oracle
             require(orcl[signer] == 1, "Median/invalid-oracle");
             // Price feed age greater than last medianizer age
+            console.log("time", block.timestamp);
             require(age_[i] > zzz, "Median/stale-message");
             // Check for ordered values
             require(val_[i] >= last, "Median/messages-not-in-order");
@@ -221,5 +222,9 @@ contract Median is LibNote {
 
     function getWat() public view returns (bytes32) {
         return wat;
+    }
+
+    function getBlockTimeStamp() public view returns (uint32) {
+        return age;
     }
 }

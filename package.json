@@ -5,10 +5,33 @@
     "hardhat": "^2.12.5"
   },
   "dependencies": {
+    "@b10k.io/hardhat-uniswap-v2-deploy-plugin": "^1.0.4",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.7",
     "@nomiclabs/hardhat-waffle": "^2.0.3",
     "@openzeppelin/contracts": "^4.8.0",
     "@uniswap/lib": "^4.0.1-alpha",
-    "@uniswap/v2-core": "^1.0.1"
-  }
+    "@uniswap/v2-core": "^1.0.1",
+    "express": "^4.18.2",
+    "solc": "^0.8.18"
+  },
+  "name": "test-contract-package",
+  "description": "#### Install hardhat",
+  "version": "1.0.0",
+  "main": "app.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lequocvieet/smart-contract-collection-package.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lequocvieet/smart-contract-collection-package/issues"
+  },
+  "homepage": "https://github.com/lequocvieet/smart-contract-collection-package#readme"
 }
