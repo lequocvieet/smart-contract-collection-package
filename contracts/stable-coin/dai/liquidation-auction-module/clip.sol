@@ -18,6 +18,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pragma solidity ^0.6.12;
+import "hardhat/console.sol";
 
 interface VatLike {
     function move(address, address, uint256) external;
@@ -168,9 +169,9 @@ contract Clipper {
     // --- Synchronization ---
     modifier lock() {
         require(locked == 0, "Clipper/system-locked");
-        locked = 1;
+        locked = 1; //run it then run fucntion
         _;
-        locked = 0;
+        locked = 0; //after all run it
     }
 
     modifier isStopped(uint256 level) {
@@ -179,7 +180,7 @@ contract Clipper {
     }
 
     // --- Administration ---
-    function file(bytes32 what, uint256 data) external auth lock {
+    function file_1(bytes32 what, uint256 data) external auth lock {
         if (what == "buf") buf = data;
         else if (what == "tail")
             tail = data; // Time elapsed before auction reset
@@ -195,7 +196,7 @@ contract Clipper {
         emit File(what, data);
     }
 
-    function file(bytes32 what, address data) external auth lock {
+    function file_2(bytes32 what, address data) external auth lock {
         if (what == "spotter") spotter = SpotterLike(data);
         else if (what == "dog") dog = DogLike(data);
         else if (what == "vow") vow = data;
@@ -294,7 +295,8 @@ contract Clipper {
             coin = add(_tip, wmul(tab, _chip));
             vat.suck(vow, kpr, coin);
         }
-
+        console.log("auction id:", id);
+        console.log("available collateral to buy:", lot);
         emit Kick(id, top, tab, lot, usr, kpr, coin);
     }
 
@@ -373,7 +375,6 @@ contract Clipper {
         {
             bool done;
             (done, price) = status(tic, sales[id].top);
-
             // Check that auction doesn't need reset
             require(!done, "Clipper/needs-reset");
         }
@@ -383,14 +384,17 @@ contract Clipper {
 
         uint256 lot = sales[id].lot;
         uint256 tab = sales[id].tab;
-        uint256 owe;
+        uint256 owe; //Dai user pay to buy collateral
 
         {
             // Purchase as much as possible, up to amt
             uint256 slice = min(lot, amt); // slice <= lot
+            console.log("amt", amt);
+            console.log("slice(number of collateral buy)", slice);
 
             // DAI needed to buy a slice of this sale
             owe = mul(slice, price);
+            console.log("owe(total pay:)", owe);
 
             // Don't collect more than tab of DAI
             if (owe > tab) {
@@ -414,9 +418,13 @@ contract Clipper {
 
             // Calculate remaining tab after operation
             tab = tab - owe; // safe since owe <= tab
+            console.log("Remaining DAI Debt in Auction:", tab);
+
             // Calculate remaining lot after operation
             lot = lot - slice;
+            console.log("Remaining Collateral in Auction", lot);
 
+            console.log("Amount Collateral send to Buyer:", slice);
             // Send collateral to who
             vat.flux(ilk, address(this), who, slice);
 
@@ -496,8 +504,13 @@ contract Clipper {
         uint96 tic,
         uint256 top
     ) internal view returns (bool done, uint256 price) {
+        console.log("Init auction price:", top);
         price = calc.price(top, sub(block.timestamp, tic));
+        console.log("price from abacus:", price);
+        console.log("block time -tic:", sub(block.timestamp, tic));
+        console.log("tail", tail);
         done = (sub(block.timestamp, tic) > tail || rdiv(price, top) < cusp);
+        console.log("done", done);
     }
 
     // Public function to update the cached dust*chop value.
@@ -513,5 +526,18 @@ contract Clipper {
         vat.flux(ilk, address(this), msg.sender, sales[id].lot);
         _remove(id);
         emit Yank(id);
+    }
+
+    function stringToBytes32(
+        string memory source
+    ) public pure returns (bytes32 result) {
+        bytes memory tempEmptyStringTest = bytes(source);
+        if (tempEmptyStringTest.length == 0) {
+            return 0x0;
+        }
+
+        assembly {
+            result := mload(add(source, 32))
+        }
     }
 }

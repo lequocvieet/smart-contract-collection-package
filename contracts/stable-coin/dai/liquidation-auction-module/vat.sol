@@ -198,6 +198,7 @@ contract Vat {
 
         // either debt has decreased, or debt ceilings are not exceeded
         console.log("current debt", debt);
+        console.log("rate", ilk.rate);
         console.log("art*rate", _mul(ilk.Art, ilk.rate));
         console.log("Line line", Line, ilk.line);
         require(

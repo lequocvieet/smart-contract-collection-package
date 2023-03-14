@@ -123,6 +123,7 @@ contract OSM is LibNote {
             nxt = Feed(uint128(wut), 1);
             zzz = prev(era());
             console.log("cur.val", cur.val);
+            console.log("nxt.val", nxt.val);
             emit LogValue(bytes32(uint(cur.val)));
         }
     }
@@ -133,6 +134,7 @@ contract OSM is LibNote {
     }
 
     function peep() external view toll returns (bytes32, bool) {
+        console.log("next", nxt.val);
         return (bytes32(uint(nxt.val)), nxt.has == 1);
     }
 

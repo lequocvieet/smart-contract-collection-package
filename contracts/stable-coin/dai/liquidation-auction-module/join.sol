@@ -35,7 +35,7 @@ interface GemLike {
 interface DSTokenLike {
     function mintz(address, uint) external;
 
-    function burn(address, uint) external;
+    function burnz(address, uint) external;
 }
 
 interface VatLike {
@@ -184,7 +184,7 @@ contract DaiJoin {
 
     function join(address usr, uint wad) external {
         vat.move(address(this), usr, mul(ONE, wad));
-        dai.burn(msg.sender, wad);
+        dai.burnz(msg.sender, wad);
         emit Join(usr, wad);
     }
 

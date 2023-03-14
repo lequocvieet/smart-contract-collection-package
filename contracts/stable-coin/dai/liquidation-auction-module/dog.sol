@@ -152,19 +152,23 @@ contract Dog {
     }
 
     // --- Administration ---
-    function file(bytes32 what, address data) external auth {
+    function file_vow(bytes32 what, address data) external auth {
         if (what == "vow") vow = VowLike(data);
         else revert("Dog/file-unrecognized-param");
         emit File(what, data);
     }
 
-    function file(bytes32 what, uint256 data) external auth {
+    function file_Hole(bytes32 what, uint256 data) external auth {
         if (what == "Hole") Hole = data;
         else revert("Dog/file-unrecognized-param");
         emit File(what, data);
     }
 
-    function file(bytes32 ilk, bytes32 what, uint256 data) external auth {
+    function file_hole_chop(
+        bytes32 ilk,
+        bytes32 what,
+        uint256 data
+    ) external auth {
         if (what == "chop") {
             require(data >= WAD, "Dog/file-chop-lt-WAD");
             ilks[ilk].chop = data;
@@ -173,7 +177,7 @@ contract Dog {
         emit File(ilk, what, data);
     }
 
-    function file(bytes32 ilk, bytes32 what, address clip) external auth {
+    function file_clip(bytes32 ilk, bytes32 what, address clip) external auth {
         if (what == "clip") {
             require(
                 ilk == ClipperLike(clip).ilk(),
@@ -217,6 +221,7 @@ contract Dog {
         {
             uint256 spot;
             (, rate, spot, , dust) = vat.ilks(ilk);
+            console.log("dust", dust);
             console.log("spot ", spot);
             console.log("ink", ink);
             console.log("art rate", art, rate);
@@ -229,18 +234,28 @@ contract Dog {
             // Get the minimum value between:
             // 1) Remaining space in the general Hole
             // 2) Remaining space in the collateral hole
-            console.log("Hole Dirt hole dirt", milk.hole, milk.dirt);
+            console.log("hole dirt", milk.hole, milk.dirt);
+            console.log("chop", milk.chop);
             require(
                 Hole > Dirt && milk.hole > milk.dirt,
                 "Dog/liquidation-limit-hit"
             );
             uint256 room = min(Hole - Dirt, milk.hole - milk.dirt);
+            console.log("room", room);
 
             // uint256.max()/(RAD*WAD) = 115,792,089,237,316
             dart = min(art, mul(room, WAD) / rate / milk.chop);
+            console.log(
+                "mul(room, WAD) / rate / milk.chop:",
+                mul(room, WAD) / rate / milk.chop
+            );
+            console.log("dart", dart);
+            console.log("art", art);
 
             // Partial liquidation edge case logic
             if (art > dart) {
+                console.log("mul(art - dart, rate)", mul(art - dart, rate));
+                console.log("dust", dust);
                 if (mul(art - dart, rate) < dust) {
                     // If the leftover Vault would be dusty, just liquidate it entirely.
                     // This will result in at least one of dirt_i > hole_i or Dirt > Hole becoming true.
@@ -279,6 +294,7 @@ contract Dog {
             // Avoid stack too deep
             // This calcuation will overflow if dart*rate exceeds ~10^14
             uint256 tab = mul(due, milk.chop) / WAD;
+            console.log("tab:", tab);
             Dirt = add(Dirt, tab);
             ilks[ilk].dirt = add(milk.dirt, tab);
 
@@ -302,5 +318,18 @@ contract Dog {
     function cage() external auth {
         live = 0;
         emit Cage();
+    }
+
+    function stringToBytes32(
+        string memory source
+    ) public pure returns (bytes32 result) {
+        bytes memory tempEmptyStringTest = bytes(source);
+        if (tempEmptyStringTest.length == 0) {
+            return 0x0;
+        }
+
+        assembly {
+            result := mload(add(source, 32))
+        }
     }
 }

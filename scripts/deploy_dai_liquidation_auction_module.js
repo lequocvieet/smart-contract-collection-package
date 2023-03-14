@@ -43,6 +43,7 @@ async function main() {
     await spot.deployed();
     console.log("Spot deploy at:", spot.address)
 
+
     //Auth to for some account permission to call lift
     tx = await median.connect(account0).rely(account1.address)
     tx2 = await median.connect(account0).rely(account2.address)
@@ -99,7 +100,7 @@ async function main() {
 
     //Now get latest price after 3 called of 3 oracle
     newOraclePrice = await median.connect(account0).peek()
-    console.log(" New Update oracle Price:", newOraclePrice[0])
+    console.log(" New Update oracle Price:   Next oracle Price", newOraclePrice[0])
 
 
     //OSM get price from median
@@ -132,12 +133,18 @@ async function main() {
 
     //-------------------------------ADD BAT COLLATERAL to VAT----------------
 
-
     //Deploy collateral BAT
     DSToken = await hre.ethers.getContractFactory("contracts/stable-coin/dai/liquidation-auction-module/token.sol:DSToken");
     bat = await DSToken.deploy("BAT");
     await bat.deployed();
     console.log("BAT deploy at:", bat.address)
+
+
+    //Deploy Dai(DSToken) for using in DaiJoin
+    Dai = await hre.ethers.getContractFactory("contracts/stable-coin/dai/liquidation-auction-module/token.sol:DSToken");
+    dai = await DSToken.deploy("DAI");
+    await dai.deployed();
+    console.log("DAI deploy at:", dai.address)
 
     //Deploy gemJoin contract
     GemJoin = await hre.ethers.getContractFactory("contracts/stable-coin/dai/liquidation-auction-module/join.sol:GemJoin");
@@ -153,15 +160,16 @@ async function main() {
     console.log("DSRoles deploy at:", ds_roles.address)
 
     //Grant  authorized permission for account1
-    await ds_roles.connect(account0).setRootUser(account1.address, true);
+    await ds_roles.setRootUser(account1.address, true);
 
     //Fund 100 BAT to account1
-    await bat.connect(account0).setAuthority(ds_roles.address)
+    await bat.setAuthority(ds_roles.address)
     await bat.connect(account1).mint(ethers.utils.parseEther("100"))
     var account1Balance = await bat.connect(account1).getBalance();
     console.log("Account1 Balance", account1Balance)
 
-    //eth must approve for gemJoin permission 
+
+    //bat must approve for gemJoin permission 
     //to call mint() that require transfer
     await bat.connect(account1).approve_max(gemJoin.address)
 
@@ -202,11 +210,6 @@ async function main() {
     console.log("ETHJoin deploy at:", ethJoin.address)
 
 
-    //Deploy Dai(DSToken) for using in DaiJoin
-    Dai = await hre.ethers.getContractFactory("contracts/stable-coin/dai/liquidation-auction-module/token.sol:DSToken");
-    dai = await DSToken.deploy("DAI");
-    await dai.deployed();
-    console.log("DAI deploy at:", dai.address)
 
 
     //Deploy DaiJoin contract
@@ -235,11 +238,11 @@ async function main() {
     await vat.connect(account0).init(priceType);
 
     //Set debt ceiling for BAT(line) and debt ceiling for all collateral(Line)
-    //Total collateral ceiling debt is 800 DAI in 10^45 uint
+    //Total collateral ceiling debt is 900 DAI in 10^45 uint
     Line = await vat.stringToBytes32("Line")
     let decimal_Line = ethers.BigNumber.from("900000000000000000000000000000000000000000000000")
     await vat.connect(account0).file_Line(Line, decimal_Line)
-    //Ceiling debt for BAT will be 400 DAI
+    //Ceiling debt for BAT will be 700 DAI
     line = await vat.stringToBytes32("line")
     let decimal_line = ethers.BigNumber.from("700000000000000000000000000000000000000000000000")
     await vat.connect(account0).file(priceType, line, decimal_line)
@@ -341,8 +344,144 @@ async function main() {
     console.log("new spot price", newSpotPrice)
 
 
+
+    //------------------------------------------Liquidation and Collateral Auction Stage-------------
+    
+    //Deploy Clip(Collateral Auction)
+    Clip =await hre.ethers.getContractFactory("Clipper"); 
+    clip=await Clip.deploy(vat.address,spot.address,dog.address,priceType);
+    await clip.deployed();
+    console.log("Clip deploy at:", clip.address)
+    
+    
+    
+    //Deploy Flop(debt Auction)
+    Flop =await hre.ethers.getContractFactory("Flopper"); 
+    flop=await Flop.deploy(vat.address,bat.address);
+    await flop.deployed();
+    console.log("Flop deploy at:", flop.address)
+
+
+    //Deploy Flap(surplus Auction)
+    Flap =await hre.ethers.getContractFactory("Flapper"); 
+    flap=await Flap.deploy(vat.address,bat.address);
+    await flap.deployed();
+    console.log("Flap deploy at:", flap.address)
+
+
+    //Deploy Vow(Maker Balance Sheet)
+    Vow =await hre.ethers.getContractFactory("Vow"); 
+    vow=await Vow.deploy(vat.address,flap.address,flop.address);
+    await vow.deployed();
+    console.log("Vow deploy at:", vow.address)
+
+
+    //init Vow contract for Dog contract
+    let vow_what=await dog.stringToBytes32("vow")
+    await dog.file_vow(vow_what,vow.address)
+
+    //init Clip contract for Dog contract
+    let clip_what=await dog.stringToBytes32("clip")
+    await dog.file_clip(priceType,clip_what,clip.address)
+
+    //Auth for dog to call clip
+    await clip.rely(dog.address)
+
+    //Auth for Clip to Read  PriceFeed from OSM
+    await osm.kiss(clip.address)
+
+
+    //auth for dog to call vow
+    await vow.rely(dog.address)
+
+    //init dust(debt floor)
+    //Hardfix dust is 100(minimum Dai Draw)
+    let dust=await vat.stringToBytes32("dust")
+    let dust_decimal=ethers.BigNumber.from("100000000000000000000000000000000000000000000000")
+    await vat.file(priceType,dust,dust_decimal)
+    //Setup Hole and hole for an aunction
+    let Hole=await dog.stringToBytes32("Hole")
+    let hole=await dog.stringToBytes32("hole")
+    let chop=await dog.stringToBytes32("chop")
+    //10 000 000 Dai(in Wad:10^45)
+    let Hole_decimal = ethers.BigNumber.from("10000000000000000000000000000000000000000000000000000")
+    let hole_decimal=Hole_decimal
+    // chop penalty 1.13 * WAD
+    let chop_decimal=ethers.utils.parseEther("1.13")
+    await dog.file_Hole(Hole,Hole_decimal)
+    await dog.file_hole_chop(priceType,hole,hole_decimal)
+    await dog.file_hole_chop(priceType,chop,chop_decimal)
+    
+
+    //Authorize for dog to call vat
+    await vat.rely(dog.address)
+    
     //Call bark() func of dog to start liquidation
     await dog.connect(account0).bark(priceType, urn, account5.address)
+
+    //----------------------------=> Done Start a Collateral Auction-----------------------------
+
+
+
+    //-----------------------------USER PARTICIPATE TO BUY COLLATERAL---------------------------
+    //Deploy Abacus() contract
+    Abacus =await hre.ethers.getContractFactory("LinearDecrease"); 
+    abacus=await Abacus.deploy();
+    await flop.deployed();
+    console.log("Abacus deploy at:", abacus.address)
+
+    //Init abacus for clip
+    abacus_what=await clip.stringToBytes32("calc")
+    await clip.file_2(abacus_what,abacus.address)
+
+    //Init tail(time elapsed util auction reset)
+    //I want this  auction reset after 3600s
+    tail_what=await clip.stringToBytes32("tail")
+    await clip.file_1(tail_what,3600)
+
+    //SetUp(tau:The number of seconds after the start of the auction where the price will hit 0)
+    //tau==auction time
+    //The price will decrease linearly along auction time
+    //The faster you join auction the more good price position you have
+    tau_what=await abacus.stringToBytes32("tau")
+    let auction_time=120  //120 second
+    await abacus.file(tau_what,auction_time)
+
+    //vat authorize for user and clip by hope()
+    await vat.connect(account2).hope(clip.address)
+
+    //Grant  authorized permission for account2
+    await ds_roles.setRootUser(account2.address, true);
+
+    //Fund 500Dai to accounnt2
+    await dai.setAuthority(ds_roles.address)
+    await dai.connect(account2).mint(ethers.utils.parseEther("500"))
+    var account2DaiBalance = await dai.connect(account2).getBalance();
+    console.log("Account2 Dai Balance", account2DaiBalance)
+
+    //dai must approve for daiJoin permission 
+    //to call mint() and burn() that require transfer
+    await dai.connect(account2).approve_max(daiJoin.address)
+
+
+    //Account2 Join 300 Dai to Vat
+    await daiJoin.connect(account2).join(account2.address,ethers.utils.parseEther("300"))
+
+    //Dog rely for clip to call dog
+    await dog.rely(clip.address)
+
+
+    //Account2 will participate in Collateral Auction
+    //Willling to Buy 1 Bat From 1.5 Bat debt a litter higher than  market price
+    //Where market price for Bat is 150$ so I will buy at 200$
+    amount_buy_decimal=ethers.utils.parseEther("1")
+    //max acceptable amount=spotPrice*1.3 (10^27) 
+    max_accept_price=ethers.BigNumber.from("200000000000000000000000000000")
+    const emptyByteArray = new Uint8Array(0);
+    await clip.connect(account2).take(1,amount_buy_decimal,max_accept_price,account2.address,emptyByteArray)
+
+    //Amount Collateral account2 takes from auction will move to Vat
+    //And Account2 can cash out that amount through gemJoin 
 
 
 
