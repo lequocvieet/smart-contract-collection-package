@@ -289,7 +289,10 @@ contract Vat {
         int dtab = _mul(ilk.rate, dart);
 
         gem[i][v] = _sub(gem[i][v], dink);
+        console.log("sin[vow] before", sin[w]);
         sin[w] = _sub(sin[w], dtab);
+        console.log("sin[vow] after", sin[w]);
+        console.log(w);
         vice = _sub(vice, dtab);
     }
 
@@ -334,5 +337,11 @@ contract Vat {
         assembly {
             result := mload(add(source, 32))
         }
+    }
+
+    function getDaiSurplusOfVowInVat(
+        address vowAddress
+    ) public view returns (uint256) {
+        return dai[vowAddress];
     }
 }

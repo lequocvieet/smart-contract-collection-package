@@ -18,6 +18,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pragma solidity ^0.6.12;
+import "hardhat/console.sol";
 
 // FIXME: This contract was altered compared to the production version.
 // It doesn't use LibNote anymore.
@@ -111,7 +112,7 @@ contract Vow {
     }
 
     // --- Administration ---
-    function file(bytes32 what, uint data) external auth {
+    function file1(bytes32 what, uint data) external auth {
         if (what == "wait") wait = data;
         else if (what == "bump") bump = data;
         else if (what == "sump") sump = data;
@@ -120,7 +121,7 @@ contract Vow {
         else revert("Vow/file-unrecognized-param");
     }
 
-    function file(bytes32 what, address data) external auth {
+    function file2(bytes32 what, address data) external auth {
         if (what == "flapper") {
             vat.nope(address(flapper));
             flapper = FlapLike(data);
@@ -161,10 +162,14 @@ contract Vow {
 
     // Debt auction
     function flop() external returns (uint id) {
+        console.log("vat.sin(this vow)", vat.sin(address(this)));
+        console.log("Sin", Sin);
+        console.log("Ash", Ash);
         require(
             sump <= sub(sub(vat.sin(address(this)), Sin), Ash),
             "Vow/insufficient-debt"
         );
+        console.log("dai in vat:", vat.dai(address(this)));
         require(vat.dai(address(this)) == 0, "Vow/surplus-not-zero");
         Ash = add(Ash, sump);
         id = flopper.kick(address(this), dump, sump);
@@ -192,5 +197,18 @@ contract Vow {
         flapper.cage(vat.dai(address(flapper)));
         flopper.cage();
         vat.heal(min(vat.dai(address(this)), vat.sin(address(this))));
+    }
+
+    function stringToBytes32(
+        string memory source
+    ) public pure returns (bytes32 result) {
+        bytes memory tempEmptyStringTest = bytes(source);
+        if (tempEmptyStringTest.length == 0) {
+            return 0x0;
+        }
+
+        assembly {
+            result := mload(add(source, 32))
+        }
     }
 }

@@ -293,6 +293,7 @@ contract Clipper {
         uint256 coin;
         if (_tip > 0 || _chip > 0) {
             coin = add(_tip, wmul(tab, _chip));
+            console.log("coin incentive to keeper", coin);
             vat.suck(vow, kpr, coin);
         }
         console.log("auction id:", id);
@@ -504,7 +505,6 @@ contract Clipper {
         uint96 tic,
         uint256 top
     ) internal view returns (bool done, uint256 price) {
-        console.log("Init auction price:", top);
         price = calc.price(top, sub(block.timestamp, tic));
         console.log("price from abacus:", price);
         console.log("block time -tic:", sub(block.timestamp, tic));

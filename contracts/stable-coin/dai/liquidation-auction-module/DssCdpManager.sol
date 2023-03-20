@@ -18,6 +18,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pragma solidity >=0.5.12;
+import "hardhat/console.sol";
 
 interface VatLike {
     function urns(bytes32, address) external view returns (uint, uint);
@@ -36,6 +37,7 @@ interface VatLike {
 contract UrnHandler {
     constructor(address vat) public {
         VatLike(vat).hope(msg.sender);
+        console.log("hoper", msg.sender);
     }
 }
 

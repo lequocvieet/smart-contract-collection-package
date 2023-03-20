@@ -253,6 +253,7 @@ async function main() {
     await ds_roles.connect(account0).setRootUser(daiJoin.address, true);
     await dai.connect(account0).setAuthority(ds_roles.address)
 
+
     //Lock 1.5 BAT and draw Dai
     await dssProxyActions.connect(account1).openLockGemAndDraw(
         dssCdpManager.address, jug.address, gemJoin.address,
@@ -384,11 +385,18 @@ async function main() {
     let clip_what=await dog.stringToBytes32("clip")
     await dog.file_clip(priceType,clip_what,clip.address)
 
+    
     //Auth for dog to call clip
     await clip.rely(dog.address)
 
+    
+
     //Auth for Clip to Read  PriceFeed from OSM
     await osm.kiss(clip.address)
+
+
+    //Vat Auth for clip to call Vat
+    await vat.rely(clip.address)
 
 
     //auth for dog to call vow
@@ -411,13 +419,21 @@ async function main() {
     await dog.file_Hole(Hole,Hole_decimal)
     await dog.file_hole_chop(priceType,hole,hole_decimal)
     await dog.file_hole_chop(priceType,chop,chop_decimal)
-    
+
+
+    //Setup chip for auction keeper 
+    //Chip 50% of tab incentive will send to keeper and accumulate to system debt
+    //Chip set to 50%, very high to easy come to bank run to test debt auction
+    let chip_what=await clip.stringToBytes32("chip")
+    let chip_decimal=ethers.utils.parseEther("50")
+    await clip.file_1(chip_what,chip_decimal)
+
 
     //Authorize for dog to call vat
     await vat.rely(dog.address)
     
     //Call bark() func of dog to start liquidation
-    await dog.connect(account0).bark(priceType, urn, account5.address)
+    await dog.bark(priceType, urn, account5.address)
 
     //----------------------------=> Done Start a Collateral Auction-----------------------------
 
@@ -434,18 +450,22 @@ async function main() {
     abacus_what=await clip.stringToBytes32("calc")
     await clip.file_2(abacus_what,abacus.address)
 
+    //Init vow for clip
+    vow_what=await clip.stringToBytes32("vow")
+    await clip.file_2(vow_what,vow.address)
+
     //Init tail(time elapsed util auction reset)
-    //I want this  auction reset after 3600s
+    //I want this  auction last for 120s
     tail_what=await clip.stringToBytes32("tail")
-    await clip.file_1(tail_what,3600)
+    await clip.file_1(tail_what,120)
 
     //SetUp(tau:The number of seconds after the start of the auction where the price will hit 0)
-    //tau==auction time
+    //tau==time util price is zero(price decrease over time)
     //The price will decrease linearly along auction time
     //The faster you join auction the more good price position you have
     tau_what=await abacus.stringToBytes32("tau")
-    let auction_time=120  //120 second
-    await abacus.file(tau_what,auction_time)
+    let time_to_zero=360  //360 second
+    await abacus.file(tau_what,time_to_zero)
 
     //vat authorize for user and clip by hope()
     await vat.connect(account2).hope(clip.address)
@@ -483,6 +503,62 @@ async function main() {
     //Amount Collateral account2 takes from auction will move to Vat
     //And Account2 can cash out that amount through gemJoin 
 
+
+    //-----------------------------Increase time to simulate auction reset-----------------------------------
+    //Increase time 
+    await time.increase(120);
+
+    //Get Auction status
+    auction_status=await clip.getStatus(1)
+    console.log("auction status:",auction_status)
+
+    
+    //Keeper or Bot Auction will priodically call the redo() to check if
+    // an auction need reset
+    await clip.connect(account3).redo(1,account3.address)
+    
+
+    //After reset no one willing to buy collateral
+    //=>Auction continues reset
+    //=>This behaviour happens again and again many times
+    //=>Increase money pay for keeper to call redo()
+    //=> Increase system debt=>Dangerous to system
+    //=> System need another auction(debt Aution)
+    //Issue MKR for amount of Dai to cover bank run
+
+    //Increase time 
+    await time.increase(130);
+
+
+    //---------------------------------------Debt Auction(MKR)-------------------------------------
+    
+    //vow call heal to heal the system debt with amount Dai recently received from collateral auction
+    let daiExistOnVat=await vat.getDaiSurplusOfVowInVat(vow.address)
+    console.log("Dai surplus:",daiExistOnVat)
+    await vow.heal(daiExistOnVat)
+
+    
+    //init sump vow(debt limit) 10 Dai(for easy to kick debt auction)10^45
+    //In real life sump will be extreamly large(system debt)
+    sump_what=await vow.stringToBytes32("sump")
+    let sump_decimal=ethers.BigNumber.from("10000000000000000000000000000000000000000000000")
+    await vow.file1(sump_what,sump_decimal)
+
+    //init dump(Amount MKR offered )
+    dump_what=await vow.stringToBytes32("dump")
+    let dump_decimal=ethers.utils.parseEther("10")
+    await vow.file1(dump_what,dump_decimal)
+
+    
+    //flo auth for vow to call kick()
+    await flop.rely(vow.address)
+
+    //vow kick the flop(debt Auction)
+    await vow.flop()
+
+
+    //---------------------------------Done Start Debt Auction-------------------------
+    
 
 
 }
