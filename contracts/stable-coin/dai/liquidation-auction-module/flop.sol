@@ -129,7 +129,7 @@ contract Flopper {
 
     // --- Auction ---
     function kick(
-        address gal,
+        address gal, //this is the Vow contract
         uint lot,
         uint bid
     ) external auth returns (uint id) {
